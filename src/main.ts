@@ -9,11 +9,12 @@ const header = document.createElement("h1");
 header.innerHTML = APP_NAME;
 app.append(header);
 
-//Clear button
-const clearButtonName = "Clear";
-const clearButton = document.createElement("button");
-clearButton.innerHTML = clearButtonName;
-app.append(clearButton);
+//All buttons; Clear button, undo button, redo button
+const clearButton = createButton("Clear");
+const undoButton = createButton("Undo");
+const redoButton = createButton("Redo");
+
+app.append(clearButton, undoButton, redoButton);
 
 //spacing
 app.append(document.createElement("div"));
@@ -26,17 +27,15 @@ app.append(canvas);
 
 //Get context
 const context = canvas.getContext("2d");
-
-console.log(typeof context);
-
 //make it blue and such
 context!.fillStyle = "skyblue";
-context!.fillRect(0, 0, 256, 256);
+context!.fillRect(0, 0, canvas.width, canvas.height);
 
 //Drawing vars
 let isDrawing = false;
 let currentPath: Array<{ x: number; y: number }> = [];
 const paths: Array<Array<{ x: number; y: number }>> = [];
+const redoStack: Array<Array<{ x: number; y: number }>> = [];
 
 //On mouse down inside canvas
 canvas.addEventListener("mousedown", (e) => {
@@ -57,19 +56,47 @@ window.addEventListener("mouseup", (e) => {
   isDrawing = false;
   paths.push(currentPath);
   currentPath = [];
+  redoStack.length = 0;
   dispatchDrawingChanged();
 });
 
+//clear button functionality
 clearButton.addEventListener("click", () => {
   paths.length = 0;
+  redoStack.length = 0;
   dispatchDrawingChanged();
 });
 
+//undo Button functionality
+undoButton.addEventListener("click", () => {
+  if (paths.length === 0) return;
+  const lastPath = paths.pop();
+  redoStack.push(lastPath!);
+  dispatchDrawingChanged();
+});
+
+//redo button functionality
+redoButton.addEventListener("click", () => {
+  if (redoStack.length === 0) return;
+  const restoredPath = redoStack.pop();
+  paths.push(restoredPath!);
+  dispatchDrawingChanged();
+});
+
+//function to create buttons
+function createButton(label: string): HTMLButtonElement {
+  const button = document.createElement("button");
+  button.innerHTML = label;
+  return button;
+}
+
+//drawing changes function
 function dispatchDrawingChanged() {
   const event = new CustomEvent("drawing-changed");
   canvas.dispatchEvent(event);
 }
 
+//Observer for drawing changed event.
 canvas.addEventListener("drawing-changed", () => {
   context!.clearRect(0, 0, canvas.width, canvas.height);
   context!.fillStyle = "skyblue";
@@ -92,21 +119,4 @@ function redrawPaths() {
     context!.stroke();
     context!.closePath();
   });
-}
-
-//funciton to draw line, idk what type context is..
-function drawLine(
-  context: CanvasRenderingContext2D,
-  x1: number,
-  y1: number,
-  x2: number,
-  y2: number
-) {
-  context.beginPath();
-  context.strokeStyle = "black";
-  context.lineWidth = 1;
-  context.moveTo(x1, y1);
-  context.lineTo(x2, y2);
-  context.stroke();
-  context.closePath();
 }
