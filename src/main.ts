@@ -13,8 +13,10 @@ app.append(header);
 const clearButton = createButton("Clear");
 const undoButton = createButton("Undo");
 const redoButton = createButton("Redo");
+const thinButton = createButton("Thin");
+const thickButton = createButton("Thick");
 
-app.append(clearButton, undoButton, redoButton);
+app.append(clearButton, undoButton, redoButton, thinButton, thickButton);
 
 //spacing
 app.append(document.createElement("div"));
@@ -37,7 +39,9 @@ let currentLine: ReturnType<typeof createLine> | null = null;
 const paths: Array<ReturnType<typeof createLine>> = [];
 const redoStack: Array<ReturnType<typeof createLine>> = [];
 
-function createLine(initialX: number, initialY: number) {
+let markerThickness = 1;
+
+function createLine(initialX: number, initialY: number, thickness: number) {
   const points: Array<{ x: number; y: number }> = [
     { x: initialX, y: initialY },
   ];
@@ -50,7 +54,7 @@ function createLine(initialX: number, initialY: number) {
     display(ctx: CanvasRenderingContext2D) {
       ctx.beginPath();
       ctx.strokeStyle = "black";
-      ctx.lineWidth = 1;
+      ctx.lineWidth = thickness;
 
       for (let i = 0; i < points.length - 1; i++) {
         const { x: x1, y: y1 } = points[i];
@@ -68,7 +72,7 @@ function createLine(initialX: number, initialY: number) {
 //On mouse down inside canvas
 canvas.addEventListener("mousedown", (e) => {
   isDrawing = true;
-  currentLine = createLine(e.offsetX, e.offsetY);
+  currentLine = createLine(e.offsetX, e.offsetY, markerThickness);
 });
 
 //on mouse move inside canvas
@@ -110,6 +114,26 @@ redoButton.addEventListener("click", () => {
   paths.push(restoredPath!);
   dispatchDrawingChanged();
 });
+
+//thinButton functionality
+thinButton.addEventListener("click", () => {
+  markerThickness = 1;
+  updateSelectedTool(thinButton);
+});
+
+//thick button functinlaity
+thickButton.addEventListener("click", () => {
+  markerThickness = 3;
+  updateSelectedTool(thickButton);
+});
+
+//function to udpateSelectedTool
+function updateSelectedTool(selectedButton: HTMLButtonElement) {
+  [thinButton, thickButton].forEach((button) =>
+    button.classList.remove("selectedTool")
+  );
+  selectedButton.classList.add("selectedTool");
+}
 
 //function to create buttons
 function createButton(label: string): HTMLButtonElement {
