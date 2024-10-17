@@ -33,29 +33,57 @@ context!.fillRect(0, 0, canvas.width, canvas.height);
 
 //Drawing vars
 let isDrawing = false;
-let currentPath: Array<{ x: number; y: number }> = [];
-const paths: Array<Array<{ x: number; y: number }>> = [];
-const redoStack: Array<Array<{ x: number; y: number }>> = [];
+let currentLine: ReturnType<typeof createLine> | null = null;
+const paths: Array<ReturnType<typeof createLine>> = [];
+const redoStack: Array<ReturnType<typeof createLine>> = [];
+
+function createLine(initialX: number, initialY: number) {
+  const points: Array<{ x: number; y: number }> = [
+    { x: initialX, y: initialY },
+  ];
+
+  return {
+    drag(x: number, y: number) {
+      points.push({ x, y });
+    },
+
+    display(ctx: CanvasRenderingContext2D) {
+      ctx.beginPath();
+      ctx.strokeStyle = "black";
+      ctx.lineWidth = 1;
+
+      for (let i = 0; i < points.length - 1; i++) {
+        const { x: x1, y: y1 } = points[i];
+        const { x: x2, y: y2 } = points[i + 1];
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+      }
+
+      ctx.stroke();
+      ctx.closePath();
+    },
+  };
+}
 
 //On mouse down inside canvas
 canvas.addEventListener("mousedown", (e) => {
   isDrawing = true;
-  currentPath = [{ x: e.offsetX, y: e.offsetY }];
+  currentLine = createLine(e.offsetX, e.offsetY);
 });
 
 //on mouse move inside canvas
 canvas.addEventListener("mousemove", (e) => {
-  if (!isDrawing) return;
-  currentPath.push({ x: e.offsetX, y: e.offsetY }); // add point to the current path
+  if (!isDrawing || !currentLine) return;
+  currentLine.drag(e.offsetX, e.offsetY); // add point to the current path
   dispatchDrawingChanged(); //dispatch event after adding a new point
 });
 
 //on mouse up on on canvas
-window.addEventListener("mouseup", (e) => {
-  if (!isDrawing) return;
+window.addEventListener("mouseup", () => {
+  if (!isDrawing || !currentLine) return;
   isDrawing = false;
-  paths.push(currentPath);
-  currentPath = [];
+  paths.push(currentLine);
+  currentLine = null;
   redoStack.length = 0;
   dispatchDrawingChanged();
 });
@@ -105,18 +133,5 @@ canvas.addEventListener("drawing-changed", () => {
 });
 
 function redrawPaths() {
-  context!.strokeStyle = "black";
-  context!.lineWidth = 1;
-
-  paths.forEach((path) => {
-    context!.beginPath();
-    for (let i = 0; i < path.length - 1; i++) {
-      const { x: x1, y: y1 } = path[i];
-      const { x: x2, y: y2 } = path[i + 1];
-      context!.moveTo(x1, y1);
-      context!.lineTo(x2, y2);
-    }
-    context!.stroke();
-    context!.closePath();
-  });
+  paths.forEach((path) => path.display(context));
 }
