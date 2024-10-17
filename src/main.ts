@@ -36,6 +36,7 @@ context!.fillRect(0, 0, canvas.width, canvas.height);
 //Drawing vars
 let isDrawing = false;
 let currentLine: ReturnType<typeof createLine> | null = null;
+let toolPreview: ReturnType<typeof createToolPreview> | null = null;
 const paths: Array<ReturnType<typeof createLine>> = [];
 const redoStack: Array<ReturnType<typeof createLine>> = [];
 
@@ -69,6 +70,20 @@ function createLine(initialX: number, initialY: number, thickness: number) {
   };
 }
 
+//create too preview
+function createToolPreview(x: number, y: number, thickness: number) {
+  return {
+    draw(ctx: CanvasRenderingContext2D) {
+      ctx.beginPath();
+      ctx.arc(x, y, thickness / 2, 0, Math.PI * 2);
+      ctx.strokeStyle = "gray";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.closePath();
+    },
+  };
+}
+
 //On mouse down inside canvas
 canvas.addEventListener("mousedown", (e) => {
   isDrawing = true;
@@ -77,9 +92,13 @@ canvas.addEventListener("mousedown", (e) => {
 
 //on mouse move inside canvas
 canvas.addEventListener("mousemove", (e) => {
-  if (!isDrawing || !currentLine) return;
-  currentLine.drag(e.offsetX, e.offsetY); // add point to the current path
-  dispatchDrawingChanged(); //dispatch event after adding a new point
+  if (isDrawing && currentLine) {
+    currentLine.drag(e.offsetX, e.offsetY);
+    dispatchDrawingChanged();
+  } else {
+    toolPreview = createToolPreview(e.offsetX, e.offsetY, markerThickness);
+    dispatchToolMoved();
+  }
 });
 
 //on mouse up on on canvas
@@ -148,12 +167,25 @@ function dispatchDrawingChanged() {
   canvas.dispatchEvent(event);
 }
 
+//function dispatch the tool-moved event
+function dispatchToolMoved() {
+  const event = new CustomEvent("tool-moved");
+  canvas.dispatchEvent(event);
+}
+
 //Observer for drawing changed event.
 canvas.addEventListener("drawing-changed", () => {
   context!.clearRect(0, 0, canvas.width, canvas.height);
   context!.fillStyle = "skyblue";
   context!.fillRect(0, 0, canvas.width, canvas.height);
   redrawPaths();
+});
+
+canvas.addEventListener("tool-moved", () => {
+  if (!isDrawing && toolPreview) {
+    redrawPaths();
+    toolPreview.draw(context);
+  }
 });
 
 function redrawPaths() {
