@@ -16,7 +16,20 @@ const redoButton = createButton("Redo");
 const thinButton = createButton("Thin");
 const thickButton = createButton("Thick");
 
-app.append(clearButton, undoButton, redoButton, thinButton, thickButton);
+const monkeyStickerButton = createButton("🐵");
+const bananaStickerButton = createButton("🍌");
+const eagleStickerButton = createButton("🦅");
+
+app.append(
+  clearButton,
+  undoButton,
+  redoButton,
+  thinButton,
+  thickButton,
+  monkeyStickerButton,
+  bananaStickerButton,
+  eagleStickerButton
+);
 
 //spacing
 app.append(document.createElement("div"));
@@ -36,11 +49,12 @@ context!.fillRect(0, 0, canvas.width, canvas.height);
 //Drawing vars
 let isDrawing = false;
 let currentLine: ReturnType<typeof createLine> | null = null;
-let toolPreview: ReturnType<typeof createToolPreview> | null = null;
+//let toolPreview: ReturnType<typeof createToolPreview> | null = null;
 const paths: Array<ReturnType<typeof createLine>> = [];
 const redoStack: Array<ReturnType<typeof createLine>> = [];
 
 let markerThickness = 1;
+let selectedSticker: string | null = null;
 
 function createLine(initialX: number, initialY: number, thickness: number) {
   const points: Array<{ x: number; y: number }> = [
@@ -70,24 +84,14 @@ function createLine(initialX: number, initialY: number, thickness: number) {
   };
 }
 
-//create too preview
-function createToolPreview(x: number, y: number, thickness: number) {
-  return {
-    draw(ctx: CanvasRenderingContext2D) {
-      ctx.beginPath();
-      ctx.arc(x, y, thickness / 2, 0, Math.PI * 2);
-      ctx.strokeStyle = "gray";
-      ctx.lineWidth = 1;
-      ctx.stroke();
-      ctx.closePath();
-    },
-  };
-}
-
 //On mouse down inside canvas
 canvas.addEventListener("mousedown", (e) => {
-  isDrawing = true;
-  currentLine = createLine(e.offsetX, e.offsetY, markerThickness);
+  if (selectedSticker) {
+    placeSticker(e.offsetX, e.offsetY, selectedSticker);
+  } else {
+    isDrawing = true;
+    currentLine = createLine(e.offsetX, e.offsetY, markerThickness);
+  }
 });
 
 //on mouse move inside canvas
@@ -96,8 +100,12 @@ canvas.addEventListener("mousemove", (e) => {
     currentLine.drag(e.offsetX, e.offsetY);
     dispatchDrawingChanged();
   } else {
-    toolPreview = createToolPreview(e.offsetX, e.offsetY, markerThickness);
-    dispatchToolMoved();
+    redrawPaths();
+    if (selectedSticker) {
+      drawStickerPreview(e.offsetX, e.offsetY, selectedSticker);
+    } else {
+      drawCursorCircle(e.offsetX, e.offsetY, markerThickness);
+    }
   }
 });
 
@@ -110,6 +118,33 @@ window.addEventListener("mouseup", () => {
   redoStack.length = 0;
   dispatchDrawingChanged();
 });
+
+// draw cursor circle
+function drawCursorCircle(x: number, y: number, thickness: number) {
+  context?.beginPath();
+  context?.arc(x, y, thickness / 2, 0, Math.PI * 2);
+  context.strokeStyle = "gray";
+  context.lineWidth = 1;
+  context?.stroke();
+  context?.closePath();
+}
+
+//draw sticker preview
+function drawStickerPreview(x: number, y: number, sticker: string) {
+  context.font = "24px sans-serif";
+  context?.fillText(sticker, x - 12, y + 12);
+}
+
+//plcae sticker
+function placeSticker(x: number, y: number, sticker: string) {
+  paths.push({
+    display(ctx: CanvasRenderingContext2D) {
+      ctx.font = "24px sans-serif";
+      ctx.fillText(sticker, x - 12, y + 12);
+    },
+  });
+  dispatchDrawingChanged();
+}
 
 //clear button functionality
 clearButton.addEventListener("click", () => {
@@ -136,15 +171,24 @@ redoButton.addEventListener("click", () => {
 
 //thinButton functionality
 thinButton.addEventListener("click", () => {
-  markerThickness = 1;
+  markerThickness = 5;
   updateSelectedTool(thinButton);
 });
 
 //thick button functinlaity
 thickButton.addEventListener("click", () => {
-  markerThickness = 3;
+  markerThickness = 9;
   updateSelectedTool(thickButton);
 });
+
+monkeyStickerButton.addEventListener("click", () => selectSticker("🐵"));
+bananaStickerButton.addEventListener("click", () => selectSticker("🍌"));
+eagleStickerButton.addEventListener("click", () => selectSticker("🦅"));
+
+//select sticker
+function selectSticker(sticker: string) {
+  selectedSticker = sticker;
+}
 
 //function to udpateSelectedTool
 function updateSelectedTool(selectedButton: HTMLButtonElement) {
@@ -152,6 +196,7 @@ function updateSelectedTool(selectedButton: HTMLButtonElement) {
     button.classList.remove("selectedTool")
   );
   selectedButton.classList.add("selectedTool");
+  selectedSticker = null;
 }
 
 //function to create buttons
@@ -181,13 +226,11 @@ canvas.addEventListener("drawing-changed", () => {
   redrawPaths();
 });
 
-canvas.addEventListener("tool-moved", () => {
-  if (!isDrawing && toolPreview) {
-    redrawPaths();
-    toolPreview.draw(context);
-  }
-});
-
 function redrawPaths() {
+  if (!context) return;
+
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  context.fillStyle = "skyblue";
+  context.fillRect(0, 0, canvas.width, canvas.height);
   paths.forEach((path) => path.display(context));
 }
