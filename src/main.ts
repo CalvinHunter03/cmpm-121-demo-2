@@ -32,6 +32,22 @@ const stickers: Array<{ emoji: string }> = [
   { emoji: "🦅" },
 ];
 
+let currentColor = "black";
+let currentRotation = 0;
+
+function getRandomColor() {
+  const letters = "0123456789ABCDEF";
+  let color = "#";
+  for (let i = 0; i < 6; i++) {
+    color += letters[Math.floor(Math.random() * 16)];
+  }
+  return color;
+}
+
+function getRandomRotation() {
+  return Math.floor(Math.random() * 360);
+}
+
 function renderStickers() {
   stickers.forEach(({ emoji }) => {
     const stickerButton = createButton(emoji);
@@ -81,7 +97,7 @@ function createLine(initialX: number, initialY: number, thickness: number) {
 
     display(ctx: CanvasRenderingContext2D) {
       ctx.beginPath();
-      ctx.strokeStyle = "black";
+      ctx.strokeStyle = currentColor;
       ctx.lineWidth = thickness;
 
       for (let i = 0; i < points.length - 1; i++) {
@@ -136,7 +152,7 @@ window.addEventListener("mouseup", () => {
 function drawCursorCircle(x: number, y: number, thickness: number) {
   context?.beginPath();
   context?.arc(x, y, thickness / 2, 0, Math.PI * 2);
-  context.strokeStyle = "gray";
+  context.strokeStyle = curretColor;
   context.lineWidth = 1;
   context?.stroke();
   context?.closePath();
@@ -144,16 +160,24 @@ function drawCursorCircle(x: number, y: number, thickness: number) {
 
 //draw sticker preview
 function drawStickerPreview(x: number, y: number, sticker: string) {
-  context.font = "24px sans-serif";
+  context?.save();
+  context?.translate(x, y);
+  context?.rotate((currentRotation * Math.PI) / 180);
+  context!.font = "24px sans-serif";
   context?.fillText(sticker, x - 12, y + 12);
+  context?.restore();
 }
 
 //plcae sticker
 function placeSticker(x: number, y: number, sticker: string) {
   paths.push({
     display(ctx: CanvasRenderingContext2D) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate((currentRotation * Math.PI) / 180);
       ctx.font = "24px sans-serif";
       ctx.fillText(sticker, x - 12, y + 12);
+      ctx.restore();
     },
   });
   dispatchDrawingChanged();
@@ -196,7 +220,7 @@ thickButton.addEventListener("click", () => {
 
 //custom sticker button functionality
 customStickerButton.addEventListener("click", () => {
-  const userSticker = prompt("Enter a custom sticker", "⭐");
+  const userSticker = prompt("Enter a custom sticker", "🧢");
   if (userSticker) {
     stickers.push({ emoji: userSticker });
     const stickerButton = createButton(userSticker);
@@ -208,6 +232,7 @@ customStickerButton.addEventListener("click", () => {
 //select sticker
 function selectSticker(sticker: string) {
   selectedSticker = sticker;
+  randomizeRule();
 }
 
 //function to udpateSelectedTool
@@ -217,6 +242,12 @@ function updateSelectedTool(selectedButton: HTMLButtonElement) {
   );
   selectedButton.classList.add("selectedTool");
   selectedSticker = null;
+  randomizeTool();
+}
+
+function randomizeTool() {
+  currentColor = getRandomColor();
+  currentRotation = getRandomRotation();
 }
 
 //function to create buttons
