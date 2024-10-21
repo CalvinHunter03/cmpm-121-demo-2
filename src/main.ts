@@ -254,3 +254,25 @@ function redrawPaths() {
   context.fillRect(0, 0, canvas.width, canvas.height);
   paths.forEach((path) => path.display(context));
 }
+
+app.append(document.createElement("div"));
+
+const exportButton = createButton("Export");
+app.append(exportButton);
+
+exportButton.addEventListener("click", () => {
+  const exportCanvas = document.createElement("canvas");
+  exportCanvas.width = 1024;
+  exportCanvas.height = 1024;
+  const exportContext = exportCanvas.getContext("2d");
+
+  exportContext?.scale(4, 4);
+
+  paths.forEach((path) => path.display(exportContext!));
+
+  const imageDataURL = exportCanvas.toDataURL("image/png");
+  const downloadLink = document.createElement("a");
+  downloadLink.href = imageDataURL;
+  downloadLink.download = "sticker-sketchpad.png";
+  downloadLink.click();
+});
