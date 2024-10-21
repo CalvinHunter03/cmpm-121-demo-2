@@ -15,10 +15,7 @@ const undoButton = createButton("Undo");
 const redoButton = createButton("Redo");
 const thinButton = createButton("Thin");
 const thickButton = createButton("Thick");
-
-const monkeyStickerButton = createButton("🐵");
-const bananaStickerButton = createButton("🍌");
-const eagleStickerButton = createButton("🦅");
+const customStickerButton = createButton("Custon Sticker");
 
 app.append(
   clearButton,
@@ -26,10 +23,26 @@ app.append(
   redoButton,
   thinButton,
   thickButton,
-  monkeyStickerButton,
-  bananaStickerButton,
-  eagleStickerButton
+  customStickerButton
 );
+
+const stickers: Array<{ emoji: string }> = [
+  { emoji: "🐵" },
+  { emoji: "🍌" },
+  { emoji: "🦅" },
+];
+
+function renderStickers() {
+  stickers.forEach(({ emoji }) => {
+    const stickerButton = createButton(emoji);
+    stickerButton.addEventListener("click", () => {
+      selectSticker(emoji);
+    });
+    app.append(stickerButton);
+  });
+}
+
+renderStickers();
 
 //spacing
 app.append(document.createElement("div"));
@@ -181,9 +194,16 @@ thickButton.addEventListener("click", () => {
   updateSelectedTool(thickButton);
 });
 
-monkeyStickerButton.addEventListener("click", () => selectSticker("🐵"));
-bananaStickerButton.addEventListener("click", () => selectSticker("🍌"));
-eagleStickerButton.addEventListener("click", () => selectSticker("🦅"));
+//custom sticker button functionality
+customStickerButton.addEventListener("click", () => {
+  const userSticker = prompt("Enter a custom sticker", "⭐");
+  if (userSticker) {
+    stickers.push({ emoji: userSticker });
+    const stickerButton = createButton(userSticker);
+    stickerButton.addEventListener("click", () => selectSticker(userSticker));
+    app.append(stickerButton);
+  }
+});
 
 //select sticker
 function selectSticker(sticker: string) {
