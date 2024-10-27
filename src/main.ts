@@ -9,13 +9,16 @@ const header = document.createElement("h1");
 header.innerHTML = APP_NAME;
 app.append(header);
 
+const CANVAS_HEIGHT = 256;
+const CANVAS_WIDTH = 256;
+
 //All buttons; Clear button, undo button, redo button
 const clearButton = createButton("Clear");
 const undoButton = createButton("Undo");
 const redoButton = createButton("Redo");
 const thinButton = createButton("Thin");
 const thickButton = createButton("Thick");
-const customStickerButton = createButton("Custon Sticker");
+const customStickerButton = createButton("Custom Sticker");
 
 app.append(
   clearButton,
@@ -65,8 +68,8 @@ app.append(document.createElement("div"));
 
 //Canvas!
 const canvas = document.createElement("canvas");
-canvas.width = 256;
-canvas.height = 256;
+canvas.width = CANVAS_WIDTH;
+canvas.height = CANVAS_HEIGHT;
 app.append(canvas);
 
 //Get context
@@ -113,6 +116,101 @@ function createLine(initialX: number, initialY: number, thickness: number) {
   };
 }
 
+// draw cursor circle
+function drawCursorCircle(x: number, y: number, thickness: number) {
+  if (context === null) {
+    return;
+  }
+  context.beginPath();
+  context.arc(x, y, thickness / 2, 0, Math.PI * 2);
+  context.strokeStyle = currentColor;
+  context.lineWidth = 1;
+  context.stroke();
+  context.closePath();
+}
+
+//draw sticker preview
+function drawStickerPreview(x: number, y: number, sticker: string) {
+  if (context === null) return;
+  context.save();
+  context.translate(x, y);
+  context.rotate((currentRotation * Math.PI) / 180);
+  context.font = "24px sans-serif";
+  context.fillText(sticker, x - 12, y + 12);
+  context.restore();
+}
+
+//plcae sticker
+function placeSticker(x: number, y: number, sticker: string) {
+  paths.push({
+    display(ctx: CanvasRenderingContext2D) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate((currentRotation * Math.PI) / 180);
+      ctx.font = "24px sans-serif";
+      ctx.fillText(sticker, x - 12, y + 12);
+      ctx.restore();
+    },
+  });
+  dispatchDrawingChanged();
+}
+
+//select sticker
+function selectSticker(sticker: string) {
+  selectedSticker = sticker;
+  randomizeTool();
+}
+
+//function to udpateSelectedTool
+function updateSelectedTool(selectedButton: HTMLButtonElement) {
+  [thinButton, thickButton].forEach((button) =>
+    button.classList.remove("selectedTool")
+  );
+  selectedButton.classList.add("selectedTool");
+  selectedSticker = null;
+  randomizeTool();
+}
+
+function randomizeTool() {
+  currentColor = getRandomColor();
+  currentRotation = getRandomRotation();
+}
+
+//function to create buttons
+function createButton(label: string): HTMLButtonElement {
+  const button = document.createElement("button");
+  button.innerHTML = label;
+  return button;
+}
+
+//drawing changes function
+function dispatchDrawingChanged() {
+  const event = new CustomEvent("drawing-changed");
+  canvas.dispatchEvent(event);
+}
+
+//Observer for drawing changed event.
+canvas.addEventListener("drawing-changed", () => {
+  context!.clearRect(0, 0, canvas.width, canvas.height);
+  context!.fillStyle = "skyblue";
+  context!.fillRect(0, 0, canvas.width, canvas.height);
+  redrawPaths();
+});
+
+function redrawPaths() {
+  if (!context) return;
+
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  context.fillStyle = "skyblue";
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  paths.forEach((path) => path.display(context));
+}
+
+app.append(document.createElement("div"));
+
+const exportButton = createButton("Export");
+app.append(exportButton);
+
 //On mouse down inside canvas
 canvas.addEventListener("mousedown", (e) => {
   if (selectedSticker) {
@@ -147,41 +245,6 @@ window.addEventListener("mouseup", () => {
   redoStack.length = 0;
   dispatchDrawingChanged();
 });
-
-// draw cursor circle
-function drawCursorCircle(x: number, y: number, thickness: number) {
-  context?.beginPath();
-  context?.arc(x, y, thickness / 2, 0, Math.PI * 2);
-  context.strokeStyle = curretColor;
-  context.lineWidth = 1;
-  context?.stroke();
-  context?.closePath();
-}
-
-//draw sticker preview
-function drawStickerPreview(x: number, y: number, sticker: string) {
-  context?.save();
-  context?.translate(x, y);
-  context?.rotate((currentRotation * Math.PI) / 180);
-  context!.font = "24px sans-serif";
-  context?.fillText(sticker, x - 12, y + 12);
-  context?.restore();
-}
-
-//plcae sticker
-function placeSticker(x: number, y: number, sticker: string) {
-  paths.push({
-    display(ctx: CanvasRenderingContext2D) {
-      ctx.save();
-      ctx.translate(x, y);
-      ctx.rotate((currentRotation * Math.PI) / 180);
-      ctx.font = "24px sans-serif";
-      ctx.fillText(sticker, x - 12, y + 12);
-      ctx.restore();
-    },
-  });
-  dispatchDrawingChanged();
-}
 
 //clear button functionality
 clearButton.addEventListener("click", () => {
@@ -228,68 +291,6 @@ customStickerButton.addEventListener("click", () => {
     app.append(stickerButton);
   }
 });
-
-//select sticker
-function selectSticker(sticker: string) {
-  selectedSticker = sticker;
-  randomizeRule();
-}
-
-//function to udpateSelectedTool
-function updateSelectedTool(selectedButton: HTMLButtonElement) {
-  [thinButton, thickButton].forEach((button) =>
-    button.classList.remove("selectedTool")
-  );
-  selectedButton.classList.add("selectedTool");
-  selectedSticker = null;
-  randomizeTool();
-}
-
-function randomizeTool() {
-  currentColor = getRandomColor();
-  currentRotation = getRandomRotation();
-}
-
-//function to create buttons
-function createButton(label: string): HTMLButtonElement {
-  const button = document.createElement("button");
-  button.innerHTML = label;
-  return button;
-}
-
-//drawing changes function
-function dispatchDrawingChanged() {
-  const event = new CustomEvent("drawing-changed");
-  canvas.dispatchEvent(event);
-}
-
-//function dispatch the tool-moved event
-function dispatchToolMoved() {
-  const event = new CustomEvent("tool-moved");
-  canvas.dispatchEvent(event);
-}
-
-//Observer for drawing changed event.
-canvas.addEventListener("drawing-changed", () => {
-  context!.clearRect(0, 0, canvas.width, canvas.height);
-  context!.fillStyle = "skyblue";
-  context!.fillRect(0, 0, canvas.width, canvas.height);
-  redrawPaths();
-});
-
-function redrawPaths() {
-  if (!context) return;
-
-  context.clearRect(0, 0, canvas.width, canvas.height);
-  context.fillStyle = "skyblue";
-  context.fillRect(0, 0, canvas.width, canvas.height);
-  paths.forEach((path) => path.display(context));
-}
-
-app.append(document.createElement("div"));
-
-const exportButton = createButton("Export");
-app.append(exportButton);
 
 exportButton.addEventListener("click", () => {
   const exportCanvas = document.createElement("canvas");
