@@ -143,6 +143,7 @@ function drawStickerPreview(x: number, y: number, sticker: string) {
 //plcae sticker
 function placeSticker(x: number, y: number, sticker: string) {
   paths.push({
+    drag: () => {},
     display(ctx: CanvasRenderingContext2D) {
       ctx.save();
       ctx.translate(x, y);
@@ -225,7 +226,13 @@ canvas.addEventListener("mousedown", (e) => {
 canvas.addEventListener("mousemove", (e) => {
   if (isDrawing && currentLine) {
     currentLine.drag(e.offsetX, e.offsetY);
-    dispatchDrawingChanged();
+  
+    // Clear and redraw paths to include the currently drawn line in real time
+    context!.clearRect(0, 0, canvas.width, canvas.height);
+    context!.fillStyle = "skyblue";
+    context!.fillRect(0, 0, canvas.width, canvas.height);
+    paths.forEach((path) => path.display(context!));
+    currentLine.display(context!); // Display the line being drawn
   } else {
     redrawPaths();
     if (selectedSticker) {
@@ -237,7 +244,7 @@ canvas.addEventListener("mousemove", (e) => {
 });
 
 //on mouse up on on canvas
-window.addEventListener("mouseup", () => {
+globalThis.addEventListener("mouseup", () => {
   if (!isDrawing || !currentLine) return;
   isDrawing = false;
   paths.push(currentLine);
