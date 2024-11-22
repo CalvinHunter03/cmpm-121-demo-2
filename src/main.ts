@@ -305,10 +305,17 @@ exportButton.addEventListener("click", () => {
   exportCanvas.height = 1024;
   const exportContext = exportCanvas.getContext("2d");
 
-  exportContext?.scale(4, 4);
 
+  exportContext?.save();
+  exportContext?.scale(4, 4);
+  exportContext!.imageSmoothingEnabled = true;
+  exportContext!.imageSmoothingQuality = "high";
+
+  // Draw paths on the scaled context
   paths.forEach((path) => path.display(exportContext!));
 
+  // Export as an image
+  exportContext?.restore();
   const imageDataURL = exportCanvas.toDataURL("image/png");
   const downloadLink = document.createElement("a");
   downloadLink.href = imageDataURL;
